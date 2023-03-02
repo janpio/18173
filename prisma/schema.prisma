@@ -1,0 +1,64 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex", "extendedWhereUnique", "fieldReference", "filteredRelationCount", "orderByNulls", "metrics", "tracing"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id                      String                   @id @default(cuid())
+  media                   Media[]                  @relation("tenant")
+  documents               Document[]               @relation("tenant")
+  mediaOnDocuments        MediaOnDocument[]        @relation("tenant") @ignore
+  mediaOnDocumentComments MediaOnDocumentComment[] @relation("tenant") @ignore
+
+  @@map("tenants")
+}
+
+model Media {
+  id        String            @default(cuid())
+  documents MediaOnDocument[]
+  tenant    Tenant            @relation("tenant", fields: [tenantId], references: [id])
+  tenantId  String            @map("tenant_id")
+
+  @@id([tenantId, id])
+  @@map("media")
+}
+
+model Document {
+  id       String            @default(cuid())
+  media    MediaOnDocument[]
+  tenant   Tenant            @relation("tenant", fields: [tenantId], references: [id])
+  tenantId String            @map("tenant_id")
+
+  @@id([tenantId, id])
+  @@map("documents")
+}
+
+model MediaOnDocument {
+  media      Media                    @relation(map: "media_on_documents_media_id", fields: [tenantId, mediaId], references: [tenantId, id])
+  mediaId    String                   @map("media_id")
+  document   Document                 @relation(map: "media_on_documents_document_id", fields: [tenantId, documentId], references: [tenantId, id])
+  documentId String                   @map("document_id")
+  comments   MediaOnDocumentComment[]
+  tenant     Tenant                   @relation("tenant", fields: [tenantId], references: [id])
+  tenantId   String                   @map("tenant_id")
+
+  @@id([tenantId, mediaId, documentId])
+  @@map("media_on_documents")
+}
+
+model MediaOnDocumentComment {
+  id              String          @default(cuid())
+  mediaOnDocument MediaOnDocument @relation(map: "media_on_documents_comment_id", fields: [tenantId, mediaId, documentId], references: [tenantId, mediaId, documentId])
+  mediaId         String          @map("media_id")
+  documentId      String          @map("document_id")
+  tenant          Tenant          @relation("tenant", fields: [tenantId], references: [id])
+  tenantId        String          @map("tenant_id")
+
+  @@id([tenantId, id])
+  @@map("media_on_document_comments")
+}
